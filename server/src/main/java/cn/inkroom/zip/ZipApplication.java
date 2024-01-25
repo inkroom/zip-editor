@@ -15,12 +15,7 @@ public class ZipApplication {
 
     @Bean
     public WebServerFactoryCustomizer<ConfigurableWebServerFactory> s() {
-        return new WebServerFactoryCustomizer<ConfigurableWebServerFactory>() {
-            @Override
-            public void customize(ConfigurableWebServerFactory factory) {
-                factory.addErrorPages(new ErrorPage(HttpStatus.NOT_FOUND, "/index.html"));
-            }
-        };
+        return factory -> factory.addErrorPages(new ErrorPage(HttpStatus.NOT_FOUND, "/index.html"));
     }
 
     public static void main(String[] args) {

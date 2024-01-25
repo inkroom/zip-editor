@@ -18,4 +18,4 @@ web版的zip文件编辑器,只支持修改文件内容,不支持添加删除文
 
 # 运行
 
-docker run -itd -v zip:/zip -p 3992:3992 -e PORT=3992 ghcr.io/inkroom/zip-editor 
+docker run -itd -v zip:/zip -p 3992:3992 -e PORT=3992 -e FILE_SIZE=50M ghcr.io/inkroom/zip-editor 

@@ -15,10 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 @Slf4j
@@ -51,7 +48,7 @@ public class ZipController {
         response.setHeader("Content-disposition", String.format("attachment; filename=\"%s\"", fileName));
         response.setCharacterEncoding("UTF-8");
 
-        IOUtils.copy(new FileInputStream(currentDirectory+"/zip/"+file),response.getOutputStream());
+        IOUtils.copy(new FileInputStream(currentDirectory + "/zip/" + file), response.getOutputStream());
 
     }
 
@@ -95,11 +92,25 @@ public class ZipController {
     @PostMapping("file/{file}")
     public String content(@PathVariable("file") String file, @RequestParam("path") String path, @RequestParam("content") String content) {
         String currentDirectory = System.getProperty("user.dir");
-        List<Map<String, Object>> res = new ArrayList<>();
         try (ZipFile zip = new ZipFile(currentDirectory + "/zip/" + file);) {
+
+            FileHeader fileHeader = zip.getFileHeader(path);
+
 
             ZipParameters zipParameters = new ZipParameters();
             zipParameters.setFileNameInZip(path);
+            zipParameters.setLastModifiedFileTime(fileHeader.getLastModifiedTime());
+            Optional.ofNullable(fileHeader.getAesExtraDataRecord()).ifPresent(z -> {
+                zipParameters.setAesVersion(z.getAesVersion());
+                zipParameters.setAesKeyStrength(z.getAesKeyStrength());
+            });
+            zipParameters.setEntryCRC(fileHeader.getCrc());
+            zipParameters.setEntrySize(fileHeader.getFileNameLength());
+            zipParameters.setFileComment(fileHeader.getFileComment());
+            zipParameters.setCompressionMethod(fileHeader.getCompressionMethod());
+            zipParameters.setEncryptionMethod(fileHeader.getEncryptionMethod());
+
+
             zip.addStream(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)), zipParameters);
 
         } catch (ZipException e) {
