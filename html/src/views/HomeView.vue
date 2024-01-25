@@ -17,7 +17,7 @@ export default {
   },
   methods:{
     _find_parent(tree,dir,path){
-      console.log(tree,dir);
+
       if(dir.length==1){// 最后一级，暂时认为只能是文件
         tree.push({title:dir[0],expand:false,path});
         return;
@@ -43,7 +43,13 @@ export default {
     },
 
     getFileList(){
+      if(this.file)
       axios.get('/api/list/'+this.file).then(res=>{
+
+        // 排序，保证 顺序一致，因为修改文件后可能会把文件顺序放最后
+       let m =  res.data.sort((a,b)=>{
+        return a.name.localeCompare(b.name,'zh-CN')
+        })
 
         // 组装成树
         let tree =[];
@@ -96,7 +102,8 @@ export default {
       this.$Message.info('上传成功');
       this.file = file.name;
       this.hasFile = true;
-      this.$router.push('/'+file.name)
+      this.$router.push('/'+file.name);
+      this.getFileList();
 
     }).catch(error => {
       console.error('上传失败', error);
