@@ -1,8 +1,66 @@
 <script>
 import axios from 'axios';
-// import qs from 'qs';
+import { resolveComponent } from 'vue'
 
+var resolvePath = function () {
+    function resolve(pathA, pathB) {
+        // 先做split，得到的结果如下几种
+        //  ‘a’     => ['a']
+        //  'a/b'   => ['a', 'b']
+        //  '/a/b'  => ['', 'a', 'b']
+        //  '/a/b/' => ['', 'a', 'b', '']
+        pathB = pathB.split('/');
+        if (pathB[0] === '') {
+            // 如果pathB是想对于根目录
+            // 则不在考虑pathA，直接返回pathB
+            return pathB.join('/');
+        }
+        pathA = pathA.split('/');
+        var aLastIndex = pathA.length - 1;
+        if (pathA[aLastIndex] !== '') {
+            // 文件名出栈，只保留路径
+            pathA[aLastIndex] = '';
+        }
 
+        var part;
+        var i = 0;
+        while (typeof(part = pathB[i]) === 'string') {
+            switch (part) {
+                case '..':
+                    // 进入父级目录
+                    pathA.pop();
+                    pathA.pop();
+                    pathA.push('');
+                    break;
+                case '.':
+                    // 当前目录
+                    break;
+                default:
+                    // 进入子目录
+                    pathA.pop();
+                    pathA.push(part);
+                    pathA.push('');
+                    break;
+            }
+            i++;
+        }
+        return pathA.join('/');
+    }
+
+    var paths = arguments;
+    var i = 0;
+    var path;
+    var r = location.pathname;
+    var multiSlashReg = /\/\/+/g;
+    while (typeof(path = paths[i]) === 'string') {
+        // '//' ==> '/'
+        path = path.replace(multiSlashReg, '/');
+        r = resolve(r, path);
+        i++;
+    }
+
+    return r;
+};
 
 export default {
   data(){
@@ -11,7 +69,9 @@ export default {
       content:'',
       path:'',
       file: this.$route.params.file,
-      hasFile: this.$route.params.file!=undefined
+      hasFile: this.$route.params.file!=undefined,
+      isPreview: false,
+      previewContent:''
     }
     
   },
@@ -72,6 +132,10 @@ export default {
     });
     },
     handleTreeClick(all,current){
+      if(!current){
+        current = all;
+      }
+      console.log('click ',current)
       if(!current.path){
         return;
       }
@@ -81,12 +145,26 @@ export default {
       .then(res=>{
           this.content = res.data;
           this.path = current.path;
+
+          this.getPreviewContent();
       }).catch(error => {
       console.error('获取文件内容失败', error);
       this.$Message.error('获取文件内容失败');
 
     });
 
+    },
+    renderTreeContent(h,{root,node,data}){
+     return h('span', {
+              style: {
+                  display: 'inline-block',
+                  float: 'right',
+                  marginRight: '32px'
+              },
+              innerHTML:data.title,
+              onClick:()=>{this.handleTreeClick(data)}
+          }
+        );
     },
     handleUpload(file){
       const formData = new FormData();
@@ -127,6 +205,74 @@ export default {
       a.click(); // 触发a标签的click事件
       document.body.removeChild(a);
 
+    },
+
+    getPreviewContent(){
+      if (this.isPreview){
+        // 处理外部依赖
+        // let p = document.createElement('div');
+        let p = new DOMParser().parseFromString(this.content,'text/html');
+
+        p.innerHTML = this.content;
+        let imgs =  p.getElementsByTagName('img');
+        console.log(imgs);
+        // debugger
+        for(let i = 0;i<imgs.length;i++){
+          let img = imgs[i];
+          let src = img.getAttribute('src')
+          if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('//'))
+          continue;
+          let new_src = resolvePath(this.path.substring(0,this.path.lastIndexOf('/')) ,src);
+          // 去除开头结尾的 /
+          new_src = new_src.substring(1,new_src.length - 1);
+          console.log(new_src)
+
+          img.setAttribute('src',location.protocol+"//"+location.host+"/api/assets/" + this.file+"?path="+ encodeURIComponent(new_src));
+
+        }
+
+        let links =  p.getElementsByTagName('link');
+        for(let i = 0;i<links.length;i++){
+          let link = links[i];
+          let src = link.getAttribute('href')
+          if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('//'))
+          continue;
+          let new_src = resolvePath(this.path.substring(0,this.path.lastIndexOf('/')) ,src);
+          // 去除开头结尾的 /
+          new_src = new_src.substring(1,new_src.length-1);
+          console.log(new_src)
+
+          link.setAttribute('href',location.protocol+"//"+location.host+"/api/assets/" + this.file+"?path="+ encodeURIComponent(new_src));
+
+        }
+        const serializer = new XMLSerializer();
+const xmlStr = serializer.serializeToString(p);
+
+        // p.innerHTML 的img没有修改，p.body.innerHTML里没有head部分
+        this.previewContent = xmlStr;
+        var iframe = this.$refs.preview,
+        iframedoc = iframe.contentDocument || iframe.contentWindow.document;
+        // iframedoc.body.innerHTML = this.previewContent;// 这个内容闪一下就没了
+
+        // console.log(this.previewContent)
+        iframedoc.open();
+        iframedoc.write(this.previewContent);
+        iframedoc.close();
+
+
+
+      }
+    },
+
+    toggle(){
+      if(this.isPreview){
+        this.previewContent = '';
+      }
+      this.isPreview = !this.isPreview
+      this.$nextTick(()=>{
+        this.getPreviewContent();
+      })
+      
     }
   }
   ,mounted(){
@@ -139,7 +285,7 @@ export default {
 <template>
   <div class="layout">
     <div class="tree">
-      <Tree :data="data" v-if="hasFile" @on-select-change="handleTreeClick" :expand-node="true"></Tree>
+      <Tree :data="data" v-if="hasFile" @on-select-change="handleTreeClick" :expand-node="true" @on-toggle-expand="handleTreeClick" :render="renderTreeContent"></Tree>
 
     </div>
 
@@ -147,10 +293,13 @@ export default {
       <Row>
           <Col span="12">
             <Upload
+                style="display: inline-block;"
                 :before-upload="handleUpload"
                 action="">
                 <Button icon="ios-cloud-upload-outline">上传epub</Button>
             </Upload>
+            <Button @click="toggle">切换</Button>
+
           </Col>
           <Col>
             <Affix>
@@ -162,7 +311,9 @@ export default {
           
         </Row>
         <Row  v-if="content !=''" class="text">
-          <textarea v-model="content"></textarea>
+          <textarea v-model="content" v-if="!isPreview"></textarea>
+          <iframe v-else class="preview" ref="preview"></iframe>
+          <!-- <div v-else v-html="previewContent" class="preview"></div> -->
         </Row>
     </div>
 
@@ -210,5 +361,9 @@ button{
   margin-left: 20px;
 
   resize: none;
+}
+.preview{
+  margin: 20px;
+  width: 100%;
 }
 </style>

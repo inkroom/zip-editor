@@ -79,7 +79,6 @@ public class ZipController {
     public String content(@PathVariable("file") String file, @RequestParam("path") String path) throws IOException {
 
         String currentDirectory = System.getProperty("user.dir");
-        List<Map<String, Object>> res = new ArrayList<>();
         try (ZipFile zip = new ZipFile(currentDirectory + "/zip/" + file);) {
             FileHeader fileHeader = zip.getFileHeader(path);
             ZipInputStream inputStream = zip.getInputStream(fileHeader);
@@ -89,9 +88,26 @@ public class ZipController {
         }
     }
 
+    @GetMapping("assets/{file}")
+    public void assets(@PathVariable("file") String file, @RequestParam("path") String path, HttpServletResponse response) throws IOException {
+        if (path.startsWith("/")){
+            path = path.substring(1);
+        }
+        String currentDirectory = System.getProperty("user.dir");
+        try (ZipFile zip = new ZipFile(currentDirectory + "/zip/" + file);) {
+            FileHeader fileHeader = zip.getFileHeader(path);
+            ZipInputStream inputStream = zip.getInputStream(fileHeader);
+            IOUtils.copy(inputStream, response.getOutputStream());
+        }
+
+    }
+
     @PostMapping("file/{file}")
     public String content(@PathVariable("file") String file, @RequestParam("path") String path, @RequestParam("content") String content) {
         String currentDirectory = System.getProperty("user.dir");
+        if (path.startsWith("/")){
+            path = path.substring(1);
+        }
         try (ZipFile zip = new ZipFile(currentDirectory + "/zip/" + file);) {
 
             FileHeader fileHeader = zip.getFileHeader(path);
