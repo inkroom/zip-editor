@@ -137,12 +137,14 @@ export default {
 </script>
 
 <template>
-    <Row>
-      <Col span="3">
-        <Tree :data="data" v-if="hasFile" @on-select-change="handleTreeClick"></Tree>
-      </Col>
-      <Col span="21">
-        <Row>
+  <div class="layout">
+    <div class="tree">
+      <Tree :data="data" v-if="hasFile" @on-select-change="handleTreeClick" :expand-node="true"></Tree>
+
+    </div>
+
+    <div class="content">
+      <Row>
           <Col span="12">
             <Upload
                 :before-upload="handleUpload"
@@ -159,16 +161,20 @@ export default {
           </Col>
           
         </Row>
-        <Row  v-if="content !=''" class="content">
+        <Row  v-if="content !=''" class="text">
           <textarea v-model="content"></textarea>
         </Row>
-      
-      </Col>
-    </Row>
+    </div>
+
+
+
+  </div>
+
 </template>
 <style>
 html,body,#app,main{
   width: 100%;
+  height: 100%;
 }
 .content{
   height: 100%;
@@ -178,5 +184,31 @@ html,body,#app,main{
 }
 button{
   margin: 10px !important;
+}
+.tree{
+  position: fixed;
+  top:0;
+  left: 0;
+  bottom: 0;
+  overflow: auto;
+  width: 200px;
+
+}
+.layout{
+  height: 100%;
+}
+.content{
+  margin-left: 200px;
+}
+.text{
+  margin-top: -60px;
+  padding-top: 60px;
+  height: 100%;
+  padding-bottom: 10px;
+}
+.text>textarea{
+  margin-left: 20px;
+
+  resize: none;
 }
 </style>
