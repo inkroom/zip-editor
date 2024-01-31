@@ -72,15 +72,16 @@ export default {
       file: this.$route.params.file,
       hasFile: this.$route.params.file != undefined,
       isPreview: false,
-      previewContent: ''
+      previewContent: '',
+      lastExpandData:undefined
     }
 
   },
   methods: {
-    _find_parent(tree, dir, path) {
-
+    _find_parent(tree, dir, path, parent,level) {
+      if(!level) level = 1;
       if (dir.length == 1) {// 最后一级，暂时认为只能是文件
-        tree.push({ title: dir[0], expand: false, path });
+        tree.push({ title: dir[0], expand: false, path,level });
         return;
       }
 
@@ -88,17 +89,17 @@ export default {
         if (tree[i].title == dir[0]) {
           dir.shift();// 删除第一个元素
 
-          this._find_parent(tree[i].children, dir, path);
+          this._find_parent(tree[i].children, dir, path,tree[i].path+"/",level+1);
           return;
         }
 
       }
       // 找完了都没有，就创建一层
-      var new_tree = { title: dir[0], children: [], expand: false };
+      var new_tree = { title: dir[0], children: [], expand: false,path: parent+dir[0],level };
       tree.push(new_tree);
       // 继续往下
       dir.shift();
-      this._find_parent(new_tree.children, dir, path);
+      this._find_parent(new_tree.children, dir, path,parent+dir[0]+'/',level + 1);
 
 
     },
@@ -117,7 +118,7 @@ export default {
           res.data.forEach(m => {
             // 拆分目录结构
             let dir = m.name.split('/');
-            this._find_parent(tree, dir, m.name)
+            this._find_parent(tree, dir, m.name,"")
 
 
 
@@ -137,6 +138,9 @@ export default {
       if (!current.path) {
         return;
       }
+      if(current.children){
+        return;
+      }
       if (this.$refs.text)
         // 记录高度
         areaScrollTop[this.file + "/" + this.path] = this.$refs.text.scrollTop
@@ -151,11 +155,15 @@ export default {
           this.content = res.data;
           this.path = current.path;
           // 重新设置滚动位置
-          if (areaScrollTop[this.file + "/" + this.path]) {
-            this.$nextTick(() => {
+
+          this.$nextTick(() => {
+            if (areaScrollTop[this.file + "/" + this.path]) {
               this.$refs.text.scrollTop = areaScrollTop[this.file + "/" + this.path];
-            })
-          }
+            } else {
+              this.$refs.text.scrollTop = 0
+            }
+          })
+
 
 
           this.getPreviewContent();
@@ -172,10 +180,19 @@ export default {
           display: 'inline-block',
           float: 'right',
           marginRight: '32px',
-          fontWeight: data.path == this.path ? '800' : 400
+          fontWeight: (data.path == this.path || this.path.startsWith(data.path) ) ? '800' : 400
         },
         innerHTML: data.title,
-        onClick: () => { this.handleTreeClick(data) }
+        onClick: () => { 
+          if(data.children){
+            if(this.lastExpandData && this.lastExpandData!=data && this.lastExpandData.level == data.level){
+              // 展开互斥，一次只能展开一个节点
+              this.lastExpandData.expand = false;
+            }
+            this.lastExpandData = data;
+          }
+          this.handleTreeClick(data) 
+        }
       }
       );
     },
@@ -271,10 +288,14 @@ export default {
           iframedoc.open();
           iframedoc.write(this.previewContent);
           iframedoc.close();
-          if (previewScrollTop[this.file + "/" + this.path])
-            this.$nextTick(() => {
+
+          this.$nextTick(() => {
+            if (previewScrollTop[this.file + "/" + this.path])
               iframedoc.documentElement.scrollTop = previewScrollTop[this.file + "/" + this.path];
-            })
+            else {
+              iframedoc.documentElement.scrollTop = 0;
+            }
+          })
         })
       }
     },
@@ -317,7 +338,7 @@ export default {
         <Col>
         <Affix>
           <Button type="primary" @click="save">保存</Button>
-          <Button type="primary" @click="download">保存</Button>
+          <Button type="primary" @click="download">导出</Button>
           <!-- <a :href="'/api/zip/'+file" :download="this.file" target="_blank" class="ivu-btn ivu-btn-primary">下载</a> -->
         </Affix>
         </Col>
@@ -389,4 +410,5 @@ button {
 .preview {
   margin: 20px;
   width: 100%;
-}</style>
+}
+</style>

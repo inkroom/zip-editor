@@ -1,0 +1,6 @@
+target/
+temp/
+Dockerfile
+Cargo.lock
+README.md
+logs/

@@ -7,7 +7,8 @@ web版的zip文件编辑器,只支持修改文本文件内容,不支持二进制
 
 # 结构
 
-- server java后端
+- server java后端,因为构建后体积较大,所以不再使用
+- rust rust后端
 - html vue3前端
 
 # 构建
@@ -18,4 +19,4 @@ web版的zip文件编辑器,只支持修改文本文件内容,不支持二进制
 
 # 运行
 
-docker run -itd -v zip:/zip -p 3992:3992 -e PORT=3992 -e FILE_SIZE=50M ghcr.io/inkroom/zip-editor 
+docker run -itd -v zip:/zip -p 3992:52800 ghcr.io/inkroom/zip-editor 
