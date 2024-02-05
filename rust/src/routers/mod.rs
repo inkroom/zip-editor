@@ -30,6 +30,7 @@ pub fn router() -> Router {
                     .push(Router::with_path("/file/<file>").get(content).post(save))
                     .push(Router::with_path("/assets/<file>").get(content))
                     .push(Router::with_path("/zip/<file>").get(download))
+                    .push(Router::with_path("/dir_list").get(dir_list))
 
                 )
                 .push(Router::with_path("<**path>").get(static_embed::<Assets>().fallback("index.html")))
@@ -84,7 +85,16 @@ async fn list(req: &mut Request, res: &mut Response){
     println!("file = {}",file);
 
     let abpath =format!("temp/{}",file);
-    let fname = std::path::Path::new(&abpath);
+
+
+    let mut fname = std::path::Path::new(&abpath);
+
+    if !fname.exists() {
+        
+        fname = std::path::Path::new(&file);
+
+    }
+
     let file = std::fs::File::open(fname).unwrap();
     let reader = std::io::BufReader::new(file);
 
@@ -113,38 +123,46 @@ async fn content(req: &mut Request, res: &mut Response){
 
     let abpath =format!("temp/{}.dir/{}",file,path);
 
-        let fname = std::path::Path::new(&abpath);
-    let mut ffile = std::fs::File::open(fname).unwrap();
+    let mut fname = std::path::Path::new(&abpath);
 
-    let mut out = Vec::new();
-    let s =ffile.read_to_end(&mut out);
-    if s.is_err(){
-        _= res.write_body(s.err().unwrap().to_string());
-        res.status_code(StatusCode::NOT_FOUND);
+    if fname.exists() {
+        
+        // fname = std::path::Path::new(&file);
+        // 展开文件夹方式
+        let mut ffile = std::fs::File::open(fname).unwrap();
 
-    }else {
-        res.write_body(Bytes::from(out)).unwrap();
+        let mut out = Vec::new();
+        let s =ffile.read_to_end(&mut out);
+        if s.is_err(){
+            _= res.write_body(s.err().unwrap().to_string());
+            res.status_code(StatusCode::NOT_FOUND);
 
+        }else {
+            res.write_body(Bytes::from(out)).unwrap();
+
+        }
+        return ;
     }
+    fname = std::path::Path::new(&file);
+    // 直接读文件方式
+    println!("fname {} path ={}",fname.display(),path);
 
+    let file = std::fs::File::open(fname).unwrap();
+    let reader = std::io::BufReader::new(file);
 
-    // let fname = std::path::Path::new(&abpath);
-    // let file = std::fs::File::open(fname).unwrap();
-    // let reader = std::io::BufReader::new(file);
+    let mut archive: zip::ZipArchive<std::io::BufReader<std::fs::File>> = zip::ZipArchive::new(reader).unwrap();
+    let mut out = Vec::new();
 
-    // let mut archive: zip::ZipArchive<std::io::BufReader<std::fs::File>> = zip::ZipArchive::new(reader).unwrap();
-    // let mut out = Vec::new();
-
-    // let mut ff =     archive.by_name(path.as_str());
-    // if ff.is_err(){
-    //     let r = String::from(format!("{:?}",ff.err().unwrap()));
-    //     res.write_body(Bytes::from(Vec::from(r.as_bytes()))).unwrap();
-    //     res.status_code(StatusCode::NOT_FOUND);
-    //     return ;
-    // }
-    // ff.expect("3223").read_to_end(&mut out).expect("ssss");
-    // res.write_body(Bytes::from(out)).expect("3823");
-    // return ;
+    let mut ff =     archive.by_name(path.as_str());
+    if ff.is_err(){
+        let r = String::from(format!("{:?}",ff.err().unwrap()));
+        res.write_body(Bytes::from(Vec::from(r.as_bytes()))).unwrap();
+        res.status_code(StatusCode::NOT_FOUND);
+        return ;
+    }
+    ff.expect("3223").read_to_end(&mut out).expect("ssss");
+    res.write_body(Bytes::from(out)).expect("3823");
+    return ;
      
 }
 
@@ -160,7 +178,13 @@ async fn save(req: &mut Request, res: &mut Response){
     // let abpath =format!("temp/{}",file);
     let abpath =format!("temp/{}.dir/{}",file,path);
 
-    let fname = std::path::Path::new(&abpath);
+    let mut fname = std::path::Path::new(&abpath);
+
+    if !fname.exists() {
+        
+        fname = std::path::Path::new(&file);
+
+    }
     let mut file =  std::fs::OpenOptions::new().write(true).read(true).open(fname).unwrap(); 
     
     file.write_all(file_content.as_bytes()).unwrap();
@@ -215,6 +239,25 @@ async fn download(req: &mut Request, res: &mut Response){
     create_zip(abpath.as_str(), dest.as_str(), zip::CompressionMethod::Zstd).unwrap();
 
     res.send_file(std::path::Path::new(&dest), req.headers()).await;
+}
+
+#[handler]
+async fn dir_list(req: &mut Request, res: &mut Response){
+
+    let walkdir = walkdir::WalkDir::new("epub");
+    let it = walkdir.into_iter();
+    let mut result:  Vec<HashMap<String,String>> = Vec::new();
+
+    for e in it.filter_map(|e| e.ok()) {
+        result.push(HashMap::from([( String::from("name") ,e.path().display().to_string())]));
+    }
+    
+
+    let out = serde_json::to_string(&result).unwrap();
+    res.add_header("content-type", "application/json; charset=utf-8", true).unwrap();
+    // res.render(salvo::prelude::Json(res));
+    res.render(out);
+
 }
 
 fn zip_dir<T>(

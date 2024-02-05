@@ -73,15 +73,16 @@ export default {
       hasFile: this.$route.params.file != undefined,
       isPreview: false,
       previewContent: '',
-      lastExpandData:undefined
+      lastExpandData: undefined,
+      hide:false
     }
 
   },
   methods: {
-    _find_parent(tree, dir, path, parent,level) {
-      if(!level) level = 1;
+    _find_parent(tree, dir, path, parent, level) {
+      if (!level) level = 1;
       if (dir.length == 1) {// 最后一级，暂时认为只能是文件
-        tree.push({ title: dir[0], expand: false, path,level });
+        tree.push({ title: dir[0], expand: false, path, level });
         return;
       }
 
@@ -89,24 +90,24 @@ export default {
         if (tree[i].title == dir[0]) {
           dir.shift();// 删除第一个元素
 
-          this._find_parent(tree[i].children, dir, path,tree[i].path+"/",level+1);
+          this._find_parent(tree[i].children, dir, path, tree[i].path + "/", level + 1);
           return;
         }
 
       }
       // 找完了都没有，就创建一层
-      var new_tree = { title: dir[0], children: [], expand: false,path: parent+dir[0],level };
+      var new_tree = { title: dir[0], children: [], expand: false, path: parent + dir[0], level };
       tree.push(new_tree);
       // 继续往下
       dir.shift();
-      this._find_parent(new_tree.children, dir, path,parent+dir[0]+'/',level + 1);
+      this._find_parent(new_tree.children, dir, path, parent + dir[0] + '/', level + 1);
 
 
     },
 
     getFileList() {
       if (this.file)
-        axios.get('/api/list/' + this.file).then(res => {
+        axios.get('/api/list/' + encodeURIComponent(this.file) ).then(res => {
 
           // 排序，保证 顺序一致，因为修改文件后可能会把文件顺序放最后
           let m = res.data.sort((a, b) => {
@@ -118,7 +119,7 @@ export default {
           res.data.forEach(m => {
             // 拆分目录结构
             let dir = m.name.split('/');
-            this._find_parent(tree, dir, m.name,"")
+            this._find_parent(tree, dir, m.name, "")
 
 
 
@@ -138,7 +139,7 @@ export default {
       if (!current.path) {
         return;
       }
-      if(current.children){
+      if (current.children) {
         return;
       }
       if (this.$refs.text)
@@ -150,7 +151,7 @@ export default {
         previewScrollTop[this.file + '/' + this.path] = iframedoc.documentElement.scrollTop;
       }
       // 获取文件内容
-      axios.get(`/api/file/${this.file}`, ({ params: { path: current.path } }))
+      axios.get(`/api/file/${encodeURIComponent(this.file)}`, ({ params: { path: current.path } }))
         .then(res => {
           this.content = res.data;
           this.path = current.path;
@@ -180,21 +181,20 @@ export default {
           display: 'inline-block',
           float: 'right',
           marginRight: '32px',
-          fontWeight: (data.path == this.path || this.path.startsWith(data.path) ) ? '800' : 400
+          fontWeight: (data.path == this.path || this.path.startsWith(data.path)) ? '800' : 400
         },
         innerHTML: data.title,
-        onClick: () => { 
-          if(data.children){
-            if(this.lastExpandData && this.lastExpandData!=data && this.lastExpandData.level == data.level){
+        onClick: () => {
+          if (data.children) {
+            if (this.lastExpandData && this.lastExpandData != data && this.lastExpandData.level == data.level) {
               // 展开互斥，一次只能展开一个节点
               this.lastExpandData.expand = false;
             }
             this.lastExpandData = data;
           }
-          this.handleTreeClick(data) 
+          this.handleTreeClick(data)
         }
-      }
-      );
+      });
     },
     handleUpload(file) {
       const formData = new FormData();
@@ -223,7 +223,7 @@ export default {
       return false;
     },
     save() {
-      axios.post(`/api/file/${this.file}`, `path=${this.path}&content=${encodeURIComponent(this.content)}`, {
+      axios.post(`/api/file/${encodeURIComponent(this.file)}`, `path=${this.path}&content=${encodeURIComponent(this.content)}`, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -257,7 +257,7 @@ export default {
           // 去除开头结尾的 /
           new_src = new_src.substring(1, new_src.length - 1);
 
-          img.setAttribute('src', location.protocol + "//" + location.host + "/api/assets/" + this.file + "?path=" + encodeURIComponent(new_src));
+          img.setAttribute('src', location.protocol + "//" + location.host + "/api/assets/" + encodeURIComponent(this.file)  + "?path=" + encodeURIComponent(new_src));
 
         }
 
@@ -309,6 +309,11 @@ export default {
         this.getPreviewContent();
       })
 
+    },
+    eclpise(){
+
+      this.hide = !this.hide;
+      
     }
   }
   , mounted() {
@@ -320,13 +325,14 @@ export default {
 
 <template>
   <div class="layout">
-    <div class="tree">
+    <div class="tree" v-if="!hide">
+      
       <Tree :data="data" v-if="hasFile" @on-select-change="handleTreeClick" :expand-node="true"
         @on-toggle-expand="handleTreeClick" :render="renderTreeContent"></Tree>
 
     </div>
 
-    <div class="content">
+    <div :class="hide ? 'content' : 'content hide' ">
       <Row>
         <Col span="12">
         <Upload style="display: inline-block;" :before-upload="handleUpload" action="">
@@ -338,7 +344,8 @@ export default {
         <Col>
         <Affix>
           <Button type="primary" @click="save">保存</Button>
-          <Button type="primary" @click="download">导出</Button>
+          <Button type="primary" @click="download">下载</Button>
+          <Button type="primary" @click="eclpise">精简</Button>
           <!-- <a :href="'/api/zip/'+file" :download="this.file" target="_blank" class="ivu-btn ivu-btn-primary">下载</a> -->
         </Affix>
         </Col>
@@ -385,13 +392,16 @@ button {
   width: 200px;
 
 }
+.expand-width{
+  width: 200px;
+}
 
 .layout {
   height: 100%;
 }
 
-.content {
-  margin-left: 200px;
+.hide {
+   margin-left: 200px; 
 }
 
 .text {
