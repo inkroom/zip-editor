@@ -7,12 +7,12 @@ WORKDIR /workdir
 RUN cargo new app && apt install -y musl-tools && rustup target add $(arch)-unknown-linux-musl
 COPY ./rust/Cargo.toml /workdir/app
 # 安装依赖
-RUN --mount=type=cache,mode=0777,target=/workdir/app/target/ cd /workdir/app && RUSTC_LINKER=musl-gcc cargo build --release --target=$(arch)-unknown-linux-musl
+RUN cd /workdir/app && RUSTC_LINKER=musl-gcc cargo build --release --target=$(arch)-unknown-linux-musl
 COPY ./rust/ /workdir/app/
 # 拷贝前端代码
 COPY --from=html /app/dist /workdir/app/static
 # 安装项目
-RUN --mount=type=cache,mode=0777,target=/workdir/app/target/  cd /workdir/app && tree && rm -rf /workdir/app/target/$(arch)-unknown-linux-musl/release/deps/zip_server-*  \
+RUN cd /workdir/app && tree && rm -rf /workdir/app/target/$(arch)-unknown-linux-musl/release/deps/zip_server-*  \
   && RUSTC_LINKER=musl-gcc cargo build --release -vv --target=$(arch)-unknown-linux-musl\
   && strip -s /workdir/app/target/$(arch)-unknown-linux-musl/release/zip-server  \
   &&  ls -all -h /workdir/app/target/$(arch)-unknown-linux-musl/release/zip-server && cp /workdir/app/target/$(arch)-unknown-linux-musl/release/zip-server /zip-server 
