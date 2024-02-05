@@ -52,4 +52,5 @@ jobs:
          github-token: ${{ secrets.GITHUB_TOKEN }}
          platforms: |
            linux/amd64
-           linux/arm64/v8
+# mac m2 构建成功,但是github上就不行,还找不到原因
+#           linux/arm64/v8
