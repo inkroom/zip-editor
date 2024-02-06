@@ -162,7 +162,7 @@ async fn list(req: &mut Request, res: &mut Response){
  */
 fn write_progress(file:&str,path:&str){
 
-    if path.ends_with(".jpg") || path.ends_with(".jpeg") || path.ends_with(".png") || path.ends_with(".gif") {
+    if !path.ends_with(".xhtml") {
         return;
     }
     std::fs::create_dir_all("epub").unwrap_or_else(|why|{

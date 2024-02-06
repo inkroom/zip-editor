@@ -188,6 +188,7 @@ export default {
       if (this.$refs.preview) {
         var iframe = this.$refs.preview,
           iframedoc = iframe.contentDocument || iframe.contentWindow.document;
+        console.log('记录 ', this.path);
         previewScrollTop[this.file + '/' + this.path] = iframedoc.documentElement.scrollTop;
       }
       // 获取文件内容
@@ -345,6 +346,7 @@ export default {
           iframedoc.close();
 
           this.$nextTick(() => {
+            console.log('previewScrollTop', previewScrollTop, this.path);
             if (previewScrollTop[this.file + "/" + this.path])
               iframedoc.documentElement.scrollTop = previewScrollTop[this.file + "/" + this.path];
             else {
@@ -379,7 +381,7 @@ export default {
         index += sep;
         if (index == this.originData.length) return;
         if (index == -1) return;
-        this.path = this.originData[index].name;
+        let new_path = this.originData[index].name;
 
         // 找到树节点
         let find_in_tree = function (tree, path) {
@@ -404,8 +406,9 @@ export default {
           }
           return null;
         }
-        let s = find_in_tree(this.data, this.path)
+        let s = find_in_tree(this.data, new_path)
         if (s == null) return;
+
         this.handleTreeClick(s);
       }
 
