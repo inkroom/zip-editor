@@ -314,7 +314,7 @@ export default {
           new_src = new_src.substring(1, new_src.length - 1);
 
           img.setAttribute('src', location.protocol + "//" + location.host + "/api/assets/" + encodeURIComponent(this.file) + "?path=" + encodeURIComponent(new_src));
-
+          img.setAttribute('style',"width:100%");
         }
 
         let links = p.getElementsByTagName('link');
@@ -600,7 +600,7 @@ export default {
     width: 100%;
     /* padding-bottom: 40px; */
     padding-left: 20px;
-    padding-right: 40px;
+    padding-right: 20px;
   }
 
   .n-upload {
