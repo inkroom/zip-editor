@@ -1,10 +1,23 @@
-<script setup>
+<script >
 import { RouterLink, RouterView } from 'vue-router'
+import { darkTheme, NConfigProvider, NMessageProvider } from 'naive-ui';
+
+export default {
+  components: { NConfigProvider, NMessageProvider },
+  data() {
+    return {
+      darkTheme
+    }
+  }
+}
+
 </script>
 
 <template>
-  <RouterView />
-</template>
+  <n-message-provider>
+    <n-config-provider :theme="darkTheme">
 
-<style scoped>
-</style>
+      <RouterView />
+    </n-config-provider>
+  </n-message-provider>
+</template>

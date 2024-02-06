@@ -5,17 +5,29 @@ use salvo::http::StatusCode;
 use salvo::writing::Text;
 use salvo::Response;
 use zip::write::FileOptions;
-use std::{collections::HashMap, io::{Read, Seek, Write}, path::Path};
+use std::{collections::HashMap, io::{Read, Seek, Write}, path::Path, ptr::read};
 use salvo::handler;
 use salvo::Request;
 use rust_embed::RustEmbed;
 use salvo::serve_static::static_embed;
-
+use serde::{Serialize, Deserialize};
 
 #[derive(RustEmbed)]
 #[folder = "static"]
 struct Assets;
 
+#[derive(Serialize, Deserialize, Debug)]
+struct Progress{
+    file:String,
+    path:String
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ListProgress{
+    
+    path:String,
+    list:Vec< HashMap<String,String>>
+}
 pub fn router() -> Router {
     // let _cors_handler = cors_middleware();
     // let mut static_routers = static_routers::create_static_routers();
@@ -80,18 +92,18 @@ async fn upload(req: &mut Request, res: &mut Response) {
 
 #[handler]
 async fn list(req: &mut Request, res: &mut Response){
-    let file = req.param::<String>("file").unwrap();
+    let file_name = req.param::<String>("file").unwrap();
 
-    println!("file = {}",file);
+    println!("file = {}",file_name);
 
-    let abpath =format!("temp/{}",file);
+    let abpath =format!("temp/{}",file_name);
 
 
     let mut fname = std::path::Path::new(&abpath);
 
     if !fname.exists() {
         
-        fname = std::path::Path::new(&file);
+        fname = std::path::Path::new(&file_name);
 
     }
 
@@ -106,14 +118,87 @@ async fn list(req: &mut Request, res: &mut Response){
         println!("file name ={}",file.name());
         result.push(HashMap::from([( String::from("name") ,String::from(file.name()))]));
 
+    }
+
+    // 获取进度
+    let mut path = String::new();
+    std::fs::create_dir_all("epub").unwrap_or_else(|why|{
+        println!("! {:?}", why.kind());
+    });
+    if let Ok(mut input) =std::fs::OpenOptions::new().write(true).create(true).read(true).open("epub/temp.progress") {
+        let mut buf = String::new();
+        input.read_to_string(&mut buf).unwrap();
         
+        if buf.len() != 0{
+                    // 反序列化
+        let progress:Vec<Progress> = serde_json::from_str(&buf).unwrap();
+        for ele in progress {
+            if ele.file == file_name {
+                path = ele.path;
+            }
+        }
+        }
+
+         
+
 
     }
-    let out = serde_json::to_string(&result).unwrap();
+
+
+    let out_result = ListProgress{
+        path,
+        list:result
+    };
+    let out = serde_json::to_string(&out_result).unwrap();
+
+
     res.add_header("content-type", "application/json; charset=utf-8", true).unwrap();
     // res.render(salvo::prelude::Json(res));
     res.render(out);
     
+}
+/**
+ * 写入进度
+ */
+fn write_progress(file:&str,path:&str){
+
+    if path.ends_with(".jpg") || path.ends_with(".jpeg") || path.ends_with(".png") || path.ends_with(".gif") {
+        return;
+    }
+    std::fs::create_dir_all("epub").unwrap_or_else(|why|{
+        println!("! {:?}", why.kind());
+    });
+    if let Ok(mut input) = std::fs::OpenOptions::new().write(true).create(true).read(true).open("epub/temp.progress") {
+        let mut buf = String::new();
+        input.read_to_string(&mut buf).unwrap();
+        let mut progress:Vec<Progress>;
+        if buf.len()==0{
+            progress=Vec::new();
+        }else{
+            // 反序列化
+             progress = serde_json::from_str(&buf).unwrap();
+        }
+        let mut find =false;
+        for ele in &mut progress {
+            if ele.file == file {
+                ele.path = String::from(path);
+                find = true;
+                break;
+            }
+        }
+        if !find{
+            progress.push(Progress { file: String::from(file), path: String::from(path) });
+        }
+
+        let res = serde_json::to_string(&progress).unwrap();
+        println!("out  = {}",res);
+        let m = res.as_bytes();
+        input.seek(std::io::SeekFrom::Start(0)).unwrap();// 把指针定到开头，否则会从读到的最后一个字节开始写
+        input.write_all(m).unwrap();
+        input.flush().unwrap();
+        input.set_len(m.len() as u64).unwrap();// 由于 新内容可能比旧内容短，所以要重新设置长度
+
+    }
 }
 
 #[handler]
@@ -124,7 +209,7 @@ async fn content(req: &mut Request, res: &mut Response){
     let abpath =format!("temp/{}.dir/{}",file,path);
 
     let mut fname = std::path::Path::new(&abpath);
-
+    write_progress(file.as_str(), path.as_str());
     if fname.exists() {
         
         // fname = std::path::Path::new(&file);
@@ -141,6 +226,7 @@ async fn content(req: &mut Request, res: &mut Response){
             res.write_body(Bytes::from(out)).unwrap();
 
         }
+        
         return ;
     }
     fname = std::path::Path::new(&file);

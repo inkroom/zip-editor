@@ -19,4 +19,4 @@ web版的zip文件编辑器,只支持修改文本文件内容,不支持二进制
 
 # 运行
 
-docker run -itd -v zip:/zip -p 3992:52800 ghcr.io/inkroom/zip-editor 
+docker run -itd -v zip:/zip -v epub:/epub -p 3992:52800 ghcr.io/inkroom/zip-editor 
