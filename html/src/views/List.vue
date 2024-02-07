@@ -43,8 +43,11 @@ export default {
           data.push(res.data[i]);
         }
       }
-
-      data.forEach(m => {
+      // 排序
+      let sorted = data.sort((a, b) => {
+         return a.name.localeCompare(b.name, 'zh-CN')
+      })
+      sorted.forEach(m => {
 
 
 
