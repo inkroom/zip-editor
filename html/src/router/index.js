@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
+import Reader from '../views/Reader.vue'
+
 import List from '../views/List.vue'
 
 const router = createRouter({
@@ -14,6 +16,11 @@ const router = createRouter({
       path: '/:file',
       name: 'home2',
       component: HomeView
+    },
+    {
+      path: '/reader/:file',
+      name: 'reader',
+      component: Reader
     },
     {
       path:'/list',

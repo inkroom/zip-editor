@@ -141,6 +141,7 @@ export default {
     getFileList() {
       if (this.file)
         axios.get('/api/list/' + encodeURIComponent(this.file)).then(res => {
+          document.title = decodeURIComponent(this.file.substring(this.file.lastIndexOf("/")+1))
 
           // 排序，保证 顺序一致，因为修改文件后可能会把文件顺序放最后
           let sorted = res.data.list.sort((a, b) => {
@@ -222,11 +223,10 @@ export default {
     renderTreeContent({ option }) {
       let data = option;
       return h('span', {
+        className: (data.path == this.path || this.path.startsWith(data.path)) ? 'highlight' : '',
         style: {
           display: 'inline-block',
           float: 'right',
-          marginRight: '32px',
-          fontWeight: (data.path == this.path || this.path.startsWith(data.path)) ? '800' : 400
         },
         innerHTML: data.title,
       });
@@ -327,7 +327,7 @@ export default {
           // 去除开头结尾的 /
           new_src = new_src.substring(1, new_src.length - 1);
 
-          link.setAttribute('href', location.protocol + "//" + location.host + "/api/assets/" + encodeURIComponent(this.file) + "?path=" + encodeURIComponent(new_src));
+          link.setAttribute('href', location.protocol + "//" + location.host + "/api/assets/" + this.file + "?path=" + encodeURIComponent(new_src));
 
         }
         const serializer = new XMLSerializer();
@@ -490,7 +490,7 @@ export default {
 
     <div :class="hide ? 'right-content' : 'right-content hide'">
       <n-spin :show="loading">
-        <div class="header">
+        <div :class="hide ? 'header hide-header' :'header'">
 
           <n-button type="primary" @click="eclpise" quaternary>
             <!-- 折叠，也就是精简 -->
@@ -615,6 +615,13 @@ export default {
     width: 98%;
   }
 
+  .hide-header{
+    button{
+      width: 25%;
+      margin-left:0px !important;
+      margin-right: 0px !important;
+    }
+  }
   button {
     margin: 10px !important;
   }
