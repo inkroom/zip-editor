@@ -141,7 +141,7 @@ export default {
     getFileList() {
       if (this.file)
         axios.get('/api/list/' + encodeURIComponent(this.file)).then(res => {
-          document.title = decodeURIComponent(this.file.substring(this.file.lastIndexOf("/")+1))
+          document.title = decodeURIComponent(this.file.substring(this.file.lastIndexOf("/") + 1))
 
           // 排序，保证 顺序一致，因为修改文件后可能会把文件顺序放最后
           let sorted = res.data.list.sort((a, b) => {
@@ -173,6 +173,45 @@ export default {
 
         });
     },
+    saveScrollTop() {
+      if (this.$refs.text) {
+        // 记录高度
+        areaScrollTop[this.file + "/" + this.path] = this.$refs.text.scrollTop
+        console.log('useScrollTop', areaScrollTop);
+      }
+      if (this.$refs.preview) {
+        var iframe = this.$refs.preview,
+          iframedoc = iframe.contentDocument || iframe.contentWindow.document;
+        console.log('记录 ', this.path);
+        previewScrollTop[this.file + '/' + this.path] = iframedoc.documentElement.scrollTop;
+      }
+    },
+    useScrollTop() {
+      console.log('useScrollTop', areaScrollTop, previewScrollTop);
+      if (this.$refs.text) {
+        console.log('text', areaScrollTop)
+        if (areaScrollTop[this.file + "/" + this.path]) {
+          this.$refs.text.scrollTop = areaScrollTop[this.file + "/" + this.path];
+        } else {
+          this.$refs.text.scrollTop = 0
+        }
+      } else {
+        var iframe = this.$refs.preview;
+        if (!iframe) return;
+        var iframedoc = iframe.contentDocument || iframe.contentWindow.document;
+        // iframedoc.body.innerHTML = this.previewContent;// 这个内容闪一下就没了
+
+        this.$nextTick(() => {
+          console.log('previewScrollTop', previewScrollTop, this.path);
+          if (previewScrollTop[this.file + "/" + this.path])
+            iframedoc.documentElement.scrollTop = previewScrollTop[this.file + "/" + this.path];
+          else {
+            iframedoc.documentElement.scrollTop = 0;
+          }
+          iframedoc.documentElement.style = 'color: #afb5c2'
+        })
+      }
+    },
     handleTreeClick(all, current) {
       if (!current) {
         current = all;
@@ -183,15 +222,7 @@ export default {
       if (current.children) {
         return 'toggleExpand';
       }
-      if (this.$refs.text)
-        // 记录高度
-        areaScrollTop[this.file + "/" + this.path] = this.$refs.text.scrollTop
-      if (this.$refs.preview) {
-        var iframe = this.$refs.preview,
-          iframedoc = iframe.contentDocument || iframe.contentWindow.document;
-        console.log('记录 ', this.path);
-        previewScrollTop[this.file + '/' + this.path] = iframedoc.documentElement.scrollTop;
-      }
+      this.saveScrollTop();
       // 获取文件内容
       axios.get(`/api/file/${encodeURIComponent(this.file)}`, ({ params: { path: current.path } }))
         .then(res => {
@@ -200,14 +231,8 @@ export default {
           // 重新设置滚动位置
 
           this.$nextTick(() => {
-            if (this.$refs.text) {
-              if (areaScrollTop[this.file + "/" + this.path]) {
-                this.$refs.text.scrollTop = areaScrollTop[this.file + "/" + this.path];
-              } else {
-                this.$refs.text.scrollTop = 0
-              }
-            }
 
+            this.useScrollTop();
           })
 
 
@@ -314,7 +339,7 @@ export default {
           new_src = new_src.substring(1, new_src.length - 1);
 
           img.setAttribute('src', location.protocol + "//" + location.host + "/api/assets/" + encodeURIComponent(this.file) + "?path=" + encodeURIComponent(new_src));
-          img.setAttribute('style',"width:100%");
+          img.setAttribute('style', "width:100%");
         }
 
         let links = p.getElementsByTagName('link');
@@ -344,16 +369,7 @@ export default {
           iframedoc.open();
           iframedoc.write(this.previewContent);
           iframedoc.close();
-
-          this.$nextTick(() => {
-            console.log('previewScrollTop', previewScrollTop, this.path);
-            if (previewScrollTop[this.file + "/" + this.path])
-              iframedoc.documentElement.scrollTop = previewScrollTop[this.file + "/" + this.path];
-            else {
-              iframedoc.documentElement.scrollTop = 0;
-            }
-            iframedoc.documentElement.style = 'color: #afb5c2'
-          })
+          this.useScrollTop()
         })
       }
     },
@@ -362,11 +378,25 @@ export default {
       if (this.isPreview) {
         this.previewContent = '';
       }
+      this.saveScrollTop();
       this.isPreview = !this.isPreview
       this.$nextTick(() => {
-        this.getPreviewContent();
+        if (this.isPreview) {
+          this.getPreviewContent();
+        } else {
+          this.useScrollTop();
+        }
       })
 
+
+
+    },
+    keydown(event) {
+      console.log(event);
+      if (event.keyCode == 83 && (navigator.platform.match("Mac") ? event.metaKey : event.ctrlKey)) {
+        event.preventDefault();
+        this.save();
+      }
     },
     eclpise() {
 
@@ -431,55 +461,55 @@ export default {
 <template>
   <div class="body">
     <div class="left-button" v-if="hide">
-          <n-button @click="prev" quaternary>
-            <!-- 上一页 -->
-            <template #icon>
-              <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20">
-                <g fill="none">
-                  <path
-                    d="M6 4.75a.75.75 0 0 0-.743.648L5.25 5.5v9a.75.75 0 0 0 1.493.102l.007-.102v-9A.75.75 0 0 0 6 4.75zm8.28.22a.75.75 0 0 0-.976-.073l-.084.073l-4.5 4.5a.75.75 0 0 0-.073.976l.073.084l4.5 4.5a.75.75 0 0 0 1.133-.976l-.073-.084L10.31 10l3.97-3.97a.75.75 0 0 0 0-1.06z"
-                    fill="currentColor"></path>
-                </g>
-              </svg>
-            </template>
-          </n-button>
-          <n-button @click="next" quaternary>
-            <!-- 下一页 -->
-            <template #icon>
-              <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20">
-                <g fill="none">
-                  <path
-                    d="M13.75 4.75a.75.75 0 0 1 .743.648l.007.102v9a.75.75 0 0 1-1.493.102L13 14.5v-9a.75.75 0 0 1 .75-.75zm-8.28.22a.75.75 0 0 1 .976-.073l.084.073l4.5 4.5a.75.75 0 0 1 .073.976l-.073.084l-4.5 4.5a.75.75 0 0 1-1.133-.976l.073-.084L9.44 10L5.47 6.03a.75.75 0 0 1 0-1.06z"
-                    fill="currentColor"></path>
-                </g>
-              </svg> </template>
-          </n-button>
-        </div>
-        <div class="right-button" v-if="hide">
-          <n-button @click="prev" quaternary>
-            <!-- 上一页 -->
-            <template #icon>
-              <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20">
-                <g fill="none">
-                  <path
-                    d="M6 4.75a.75.75 0 0 0-.743.648L5.25 5.5v9a.75.75 0 0 0 1.493.102l.007-.102v-9A.75.75 0 0 0 6 4.75zm8.28.22a.75.75 0 0 0-.976-.073l-.084.073l-4.5 4.5a.75.75 0 0 0-.073.976l.073.084l4.5 4.5a.75.75 0 0 0 1.133-.976l-.073-.084L10.31 10l3.97-3.97a.75.75 0 0 0 0-1.06z"
-                    fill="currentColor"></path>
-                </g>
-              </svg>
-            </template>
-          </n-button>
-          <n-button @click="next" quaternary>
-            <!-- 下一页 -->
-            <template #icon>
-              <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20">
-                <g fill="none">
-                  <path
-                    d="M13.75 4.75a.75.75 0 0 1 .743.648l.007.102v9a.75.75 0 0 1-1.493.102L13 14.5v-9a.75.75 0 0 1 .75-.75zm-8.28.22a.75.75 0 0 1 .976-.073l.084.073l4.5 4.5a.75.75 0 0 1 .073.976l-.073.084l-4.5 4.5a.75.75 0 0 1-1.133-.976l.073-.084L9.44 10L5.47 6.03a.75.75 0 0 1 0-1.06z"
-                    fill="currentColor"></path>
-                </g>
-              </svg> </template>
-          </n-button>
-        </div>
+      <n-button @click="prev" quaternary>
+        <!-- 上一页 -->
+        <template #icon>
+          <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20">
+            <g fill="none">
+              <path
+                d="M6 4.75a.75.75 0 0 0-.743.648L5.25 5.5v9a.75.75 0 0 0 1.493.102l.007-.102v-9A.75.75 0 0 0 6 4.75zm8.28.22a.75.75 0 0 0-.976-.073l-.084.073l-4.5 4.5a.75.75 0 0 0-.073.976l.073.084l4.5 4.5a.75.75 0 0 0 1.133-.976l-.073-.084L10.31 10l3.97-3.97a.75.75 0 0 0 0-1.06z"
+                fill="currentColor"></path>
+            </g>
+          </svg>
+        </template>
+      </n-button>
+      <n-button @click="next" quaternary>
+        <!-- 下一页 -->
+        <template #icon>
+          <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20">
+            <g fill="none">
+              <path
+                d="M13.75 4.75a.75.75 0 0 1 .743.648l.007.102v9a.75.75 0 0 1-1.493.102L13 14.5v-9a.75.75 0 0 1 .75-.75zm-8.28.22a.75.75 0 0 1 .976-.073l.084.073l4.5 4.5a.75.75 0 0 1 .073.976l-.073.084l-4.5 4.5a.75.75 0 0 1-1.133-.976l.073-.084L9.44 10L5.47 6.03a.75.75 0 0 1 0-1.06z"
+                fill="currentColor"></path>
+            </g>
+          </svg> </template>
+      </n-button>
+    </div>
+    <div class="right-button" v-if="hide">
+      <n-button @click="prev" quaternary>
+        <!-- 上一页 -->
+        <template #icon>
+          <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20">
+            <g fill="none">
+              <path
+                d="M6 4.75a.75.75 0 0 0-.743.648L5.25 5.5v9a.75.75 0 0 0 1.493.102l.007-.102v-9A.75.75 0 0 0 6 4.75zm8.28.22a.75.75 0 0 0-.976-.073l-.084.073l-4.5 4.5a.75.75 0 0 0-.073.976l.073.084l4.5 4.5a.75.75 0 0 0 1.133-.976l-.073-.084L10.31 10l3.97-3.97a.75.75 0 0 0 0-1.06z"
+                fill="currentColor"></path>
+            </g>
+          </svg>
+        </template>
+      </n-button>
+      <n-button @click="next" quaternary>
+        <!-- 下一页 -->
+        <template #icon>
+          <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 20 20">
+            <g fill="none">
+              <path
+                d="M13.75 4.75a.75.75 0 0 1 .743.648l.007.102v9a.75.75 0 0 1-1.493.102L13 14.5v-9a.75.75 0 0 1 .75-.75zm-8.28.22a.75.75 0 0 1 .976-.073l.084.073l4.5 4.5a.75.75 0 0 1 .073.976l-.073.084l-4.5 4.5a.75.75 0 0 1-1.133-.976l.073-.084L9.44 10L5.47 6.03a.75.75 0 0 1 0-1.06z"
+                fill="currentColor"></path>
+            </g>
+          </svg> </template>
+      </n-button>
+    </div>
     <div class="left tree" v-if="!hide">
 
       <n-tree :data="data" v-if="hasFile" @on-select-change="handleTreeClick" :expand-on-click="true"
@@ -490,7 +520,7 @@ export default {
 
     <div :class="hide ? 'right-content' : 'right-content hide'">
       <n-spin :show="loading">
-        <div :class="hide ? 'header hide-header' :'header'">
+        <div :class="hide ? 'header hide-header' : 'header'">
 
           <n-button type="primary" @click="eclpise" quaternary>
             <!-- 折叠，也就是精简 -->
@@ -590,10 +620,10 @@ export default {
 
         </div>
       </n-spin>
-  
+
       <div v-if="content != ''" class="text">
-   
-        <textarea v-model="content" v-if="!isPreview" ref="text"></textarea>
+
+        <textarea v-model="content" v-if="!isPreview" ref="text" @keydown="keydown"></textarea>
         <iframe v-else class="preview" ref="preview"></iframe>
       </div>
     </div>
@@ -615,13 +645,14 @@ export default {
     width: 98%;
   }
 
-  .hide-header{
-    button{
+  .hide-header {
+    button {
       width: 25%;
-      margin-left:0px !important;
+      margin-left: 0px !important;
       margin-right: 0px !important;
     }
   }
+
   button {
     margin: 10px !important;
   }
@@ -682,25 +713,29 @@ export default {
     height: 100%;
     margin: 0px;
   }
-  .left-button{
+
+  .left-button {
     position: fixed;
     top: 50%;
     left: -8px;
-    button{
+
+    button {
       display: block;
-      margin-left:0px !important;
+      margin-left: 0px !important;
       padding-left: 0px !important;
       width: 40px;
       height: 40px;
     }
   }
-  .right-button{
+
+  .right-button {
     position: fixed;
     top: 50%;
     right: 8px;
-    button{
+
+    button {
       display: block;
-      margin-right:0px !important;
+      margin-right: 0px !important;
       padding-right: 0px !important;
       width: 40px;
       height: 40px;
