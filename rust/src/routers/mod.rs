@@ -12,6 +12,10 @@ use rust_embed::RustEmbed;
 use salvo::serve_static::static_embed;
 use serde::{Serialize, Deserialize};
 
+const EXTRACT_DIR: &str = "extract";
+const TEMP_DIR:&str = "temp";
+const EPUB_DIR:&str = "epub";
+
 #[derive(RustEmbed)]
 #[folder = "static"]
 struct Assets;
@@ -63,12 +67,12 @@ pub fn router() -> Router {
 #[handler]
 async fn upload(req: &mut Request, res: &mut Response) {
     let files = req.files("file").await;
-    std::fs::create_dir_all("temp").unwrap();
-    std::fs::create_dir_all("extract").unwrap();
+    std::fs::create_dir_all(TEMP_DIR).unwrap();
+    std::fs::create_dir_all(EXTRACT_DIR).unwrap();
     if let Some(files) = files {
         let mut msgs = Vec::with_capacity(files.len());
         for file in files {
-            let dest = format!("temp/{}", file.name().unwrap_or("file"));
+            let dest = format!("{}/{}",TEMP_DIR, file.name().unwrap_or("file"));
             if let Err(e) = std::fs::copy(&file.path(), Path::new(&dest)) {
                 res.status_code(StatusCode::INTERNAL_SERVER_ERROR);
                 res.render(Text::Plain(format!("file not found in request: {}", e)));
@@ -76,7 +80,8 @@ async fn upload(req: &mut Request, res: &mut Response) {
                
 
                 // 解压文件 ， 因为 zip 库不支持修改单个文件，所以只能解压后操作
-                let prefix = format!("extract/{}.dir",dest.as_str());
+                let prefix = format!("{}/{}.dir",EXTRACT_DIR,file.name().unwrap_or("file"));
+                println!("prefix = {}",prefix);
                 extract(dest.as_str(), prefix.as_str());
                 msgs.push(dest);
             }
@@ -97,7 +102,7 @@ async fn list(req: &mut Request, res: &mut Response){
 
     println!("file = {}",file_name);
 
-    let abpath =format!("temp/{}",file_name);
+    let abpath =format!("{}/{}",TEMP_DIR,file_name);
 
 
     let mut fname = std::path::Path::new(&abpath);
@@ -123,10 +128,10 @@ async fn list(req: &mut Request, res: &mut Response){
 
     // 获取进度
     let mut path = String::new();
-    std::fs::create_dir_all("epub").unwrap_or_else(|why|{
+    std::fs::create_dir_all(EPUB_DIR).unwrap_or_else(|why|{
         println!("! {:?}", why.kind());
     });
-    if let Ok(mut input) =std::fs::OpenOptions::new().write(true).create(true).read(true).open("epub/temp.progress") {
+    if let Ok(mut input) =std::fs::OpenOptions::new().write(true).create(true).read(true).open(format!("{}/temp.progress",EPUB_DIR) ) {
         let mut buf = String::new();
         input.read_to_string(&mut buf).unwrap();
         
@@ -166,10 +171,10 @@ fn write_progress(file:&str,path:&str){
     if !path.ends_with(".xhtml") {
         return;
     }
-    std::fs::create_dir_all("epub").unwrap_or_else(|why|{
+    std::fs::create_dir_all(EPUB_DIR).unwrap_or_else(|why|{
         println!("! {:?}", why.kind());
     });
-    if let Ok(mut input) = std::fs::OpenOptions::new().write(true).create(true).read(true).open("epub/temp.progress") {
+    if let Ok(mut input) = std::fs::OpenOptions::new().write(true).create(true).read(true).open(format!("{}/temp.progress",EPUB_DIR)) {
         let mut buf = String::new();
         input.read_to_string(&mut buf).unwrap();
         let mut progress:Vec<Progress>;
@@ -207,7 +212,7 @@ async fn content(req: &mut Request, res: &mut Response){
     let file = req.param::<String>("file").unwrap();
     let path =req.query::<String>("path").unwrap();
 
-    let abpath =format!("temp/{}.dir/{}",file,path);
+    let abpath =format!("{}/{}.dir/{}",EXTRACT_DIR,file,path);
 
     let mut fname = std::path::Path::new(&abpath);
     write_progress(file.as_str(), path.as_str());
@@ -263,7 +268,7 @@ async fn save(req: &mut Request, res: &mut Response){
     println!("op {} file=[{}]",path,file);
 
     // let abpath =format!("temp/{}",file);
-    let abpath =format!("temp/{}.dir/{}",file,path);
+    let abpath =format!("{}/{}.dir/{}",EXTRACT_DIR,file,path);
 
     let mut fname = std::path::Path::new(&abpath);
 
@@ -321,8 +326,8 @@ async fn save(req: &mut Request, res: &mut Response){
 #[handler]
 async fn download(req: &mut Request, res: &mut Response){
     let file = req.param::<String>("file").unwrap();
-    let abpath =format!("extract/{}.dir/",file);
-    let dest = format!("temp/{}",file);
+    let abpath =format!("{}/{}.dir/",EXTRACT_DIR,file);
+    let dest = format!("{}/{}",TEMP_DIR,file);
     create_zip(abpath.as_str(), dest.as_str(), zip::CompressionMethod::Zstd).unwrap();
 
     res.send_file(std::path::Path::new(&dest), req.headers()).await;
@@ -331,7 +336,7 @@ async fn download(req: &mut Request, res: &mut Response){
 #[handler]
 async fn dir_list(req: &mut Request, res: &mut Response){
 
-    let walkdir = walkdir::WalkDir::new("epub");
+    let walkdir = walkdir::WalkDir::new(EPUB_DIR);
     let it = walkdir.into_iter();
     let mut result:  Vec<HashMap<String,String>> = Vec::new();
 
