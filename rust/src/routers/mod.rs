@@ -64,6 +64,7 @@ pub fn router() -> Router {
 async fn upload(req: &mut Request, res: &mut Response) {
     let files = req.files("file").await;
     std::fs::create_dir_all("temp").unwrap();
+    std::fs::create_dir_all("extract").unwrap();
     if let Some(files) = files {
         let mut msgs = Vec::with_capacity(files.len());
         for file in files {
@@ -75,7 +76,7 @@ async fn upload(req: &mut Request, res: &mut Response) {
                
 
                 // 解压文件 ， 因为 zip 库不支持修改单个文件，所以只能解压后操作
-                let prefix = format!("{}.dir",dest.as_str());
+                let prefix = format!("extract/{}.dir",dest.as_str());
                 extract(dest.as_str(), prefix.as_str());
                 msgs.push(dest);
             }
@@ -320,7 +321,7 @@ async fn save(req: &mut Request, res: &mut Response){
 #[handler]
 async fn download(req: &mut Request, res: &mut Response){
     let file = req.param::<String>("file").unwrap();
-    let abpath =format!("temp/{}.dir/",file);
+    let abpath =format!("extract/{}.dir/",file);
     let dest = format!("temp/{}",file);
     create_zip(abpath.as_str(), dest.as_str(), zip::CompressionMethod::Zstd).unwrap();
 
