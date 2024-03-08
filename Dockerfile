@@ -2,7 +2,7 @@ FROM node:18.18.0 as html
 COPY ./html /app/
 RUN cd /app/ && npm --registry https://registry.npmmirror.com/ i && npm run build
 
-FROM inkbox/rust as rust
+FROM inkbox/rust:1.75.0 as rust
 WORKDIR /workdir
 RUN cargo new app && apt install -y musl-tools && rustup target add $(arch)-unknown-linux-musl
 COPY ./rust/Cargo.toml /workdir/app
