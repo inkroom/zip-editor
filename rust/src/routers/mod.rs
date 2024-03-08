@@ -277,7 +277,7 @@ async fn save(req: &mut Request, res: &mut Response){
         fname = std::path::Path::new(&file);
 
     }
-    let mut file =  std::fs::OpenOptions::new().write(true).read(true).open(fname).unwrap(); 
+    let mut file =  std::fs::OpenOptions::new().write(true).truncate(true).read(true).open(fname).unwrap(); 
     
     file.write_all(file_content.as_bytes()).unwrap();
     file.flush().unwrap();
@@ -461,4 +461,49 @@ fn extract(path:&str,prefix:&str) -> i32 {
     }
 
     0
+}
+
+
+#[cfg(test)]
+mod tests {
+    use salvo::prelude::*;
+    use salvo::test::{ResponseExt, TestClient};
+
+    use crate::config::CFG;
+
+    #[tokio::test]
+    async fn test_write_less_file() {
+        use std::io::Write;
+        let abpath =format!("test.txt");
+
+        {
+
+            let file_content = "1234";
+
+        
+            let mut fname = std::path::Path::new(&abpath);
+    
+            let mut file =  std::fs::OpenOptions::new().write(true).create(true).truncate(true).read(true).open(fname).unwrap(); 
+            let len = file_content.as_bytes();
+            file.write_all(len).unwrap();
+            file.flush().unwrap();
+        }
+        // file.set_len(len.len() as usize);
+
+        {
+
+            let file_content = "abc";
+
+        
+            let mut fname = std::path::Path::new(&abpath);
+    
+            let mut file =  std::fs::OpenOptions::new().write(true).truncate(true).read(true).open(fname).unwrap(); 
+            let len = file_content.as_bytes();
+            // file.set_len(0);
+            // file.write_all(len).unwrap();
+            // file.flush().unwrap();
+        }
+
+
+    }
 }
