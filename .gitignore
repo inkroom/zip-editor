@@ -27,4 +27,6 @@
 .DS_Store
 *.log*
 *.out
-src/main/java/com/xiyou/httpserver/.DS_Store
+
+html/node_modules
+html/dist

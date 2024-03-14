@@ -1,2 +1,7 @@
 /target
 /migration/target
+static
+logs
+epub
+extract
+temp
