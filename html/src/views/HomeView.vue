@@ -355,6 +355,12 @@ export default {
           link.setAttribute('href', location.protocol + "//" + location.host + "/api/assets/" + this.file + "?path=" + encodeURIComponent(new_src));
 
         }
+
+        let sty = p.createElement('style');
+        sty.innerHTML = "body::-webkit-scrollbar {display: none;}";
+        let h = p.getElementsByTagName('head')[0];
+        h.appendChild(sty);
+
         const serializer = new XMLSerializer();
         const xmlStr = serializer.serializeToString(p);
         this.$nextTick(() => {
@@ -548,19 +554,21 @@ export default {
             </template>
           </n-button>
           <n-upload style="display: inline-block;" :on-finish="uploadSuccess" :show-file-list="false"
-            :on-before-upload="beforeUpload" :on-error="uploadError" action="/api/upload" v-if="!hide" :loading="loading">
+            :on-before-upload="beforeUpload" :on-error="uploadError" action="/api/upload" v-if="!hide"
+            :loading="loading">
             <!-- 上传 -->
             <n-button quaternary>
               <template #icon>
-                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512">
+                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                  viewBox="0 0 512 512">
                   <path
                     d="M320 367.79h76c55 0 100-29.21 100-83.6s-53-81.47-96-83.6c-8.89-85.06-71-136.8-144-136.8c-69 0-113.44 45.79-128 91.2c-60 5.7-112 43.88-112 106.4s54 106.4 120 106.4h56"
                     fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32">
                   </path>
-                  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"
-                    d="M320 255.79l-64-64l-64 64"></path>
-                  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"
-                    d="M256 448.21V207.79"></path>
+                  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="32" d="M320 255.79l-64-64l-64 64"></path>
+                  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="32" d="M256 448.21V207.79"></path>
                 </svg>
               </template>
             </n-button>
@@ -639,11 +647,12 @@ export default {
 
   .content {
     height: 100%;
+
+    textarea {
+      width: 98%;
+    }
   }
 
-  .content textarea {
-    width: 98%;
-  }
 
   .hide-header {
     button {
@@ -671,9 +680,6 @@ export default {
     width: 200px;
   }
 
-  .body {
-    height: 100%;
-  }
 
   .hide {
     margin-left: 200px;
@@ -681,38 +687,44 @@ export default {
 
   .right-content {
     height: 100%;
+
+    .text {
+      margin-top: -70px;
+      padding-top: 70px;
+      height: 100%;
+      width: 100%;
+      /* padding-bottom: 40px; */
+      padding-left: 20px;
+      padding-right: 20px;
+
+      &>textarea {
+        width: 100%;
+        padding-left: 5px;
+        padding-right: 5px;
+        resize: none;
+        height: 100%;
+        background-color: inherit;
+        color: inherit;
+        font-size: 18px;
+      }
+
+      .preview {
+        width: 100%;
+        height: 100%;
+        margin: 0px;
+
+        &::-webkit-scrollbar{
+          display: none;
+        }
+      }
+    }
   }
 
-  .right-content .text {
-    margin-top: -70px;
-    padding-top: 70px;
-    height: 100%;
-    width: 100%;
-    /* padding-bottom: 40px; */
-    padding-left: 20px;
-    padding-right: 20px;
-  }
 
   .n-upload {
     display: inline !important;
   }
 
-  .right-content .text>textarea {
-    width: 100%;
-    padding-left: 5px;
-    padding-right: 5px;
-    resize: none;
-    height: 100%;
-    background-color: inherit;
-    color: inherit;
-    font-size: 18px;
-  }
-
-  .right-content .text .preview {
-    width: 100%;
-    height: 100%;
-    margin: 0px;
-  }
 
   .left-button {
     position: fixed;

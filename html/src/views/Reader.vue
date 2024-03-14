@@ -233,6 +233,7 @@ export default {
 
           promises.push(this.zip.file(new_src).async('string').then(css => {
             let sty = p.createElement('style');
+            css =  "body::-webkit-scrollbar {display: none;}"+css;
             sty.innerHTML = css;
             let h = p.getElementsByTagName('head')[0];
             h.appendChild(sty);
