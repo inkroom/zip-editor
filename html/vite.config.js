@@ -22,15 +22,10 @@ export default defineConfig({
     proxy: {
       // 选项写法
       '/api': {
-        target: 'http://192.168.150.96:52800',
+        target: 'http://127.0.0.1:52800',
         changeOrigin: true,
         // rewrite: (path) => path.replace(/^\/api/, '')
       },
-      // '/api': {
-      //   target: 'http://192.168.150.96:39348',
-      //   changeOrigin: true,
-      //   // rewrite: (path) => path.replace(/^\/api/, '')
-      // },
     }
   },
   css:{
