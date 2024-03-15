@@ -352,7 +352,7 @@ export default {
           // 去除开头结尾的 /
           new_src = new_src.substring(1, new_src.length - 1);
 
-          link.setAttribute('href', location.protocol + "//" + location.host + "/api/assets/" + this.file + "?path=" + encodeURIComponent(new_src));
+          link.setAttribute('href', location.protocol + "//" + location.host + "/api/assets/" + encodeURIComponent(this.file) + "?path=" + encodeURIComponent(new_src));
 
         }
 
